@@ -1,35 +1,39 @@
-use actix_web::{App, HttpResponse, HttpServer, Responder, web};
+mod core;
+mod endpoints;
+mod models;
+mod service;
+mod settings;
 
-// --- Handler Function ---
-async fn health_check() -> impl Responder {
-    HttpResponse::Ok().finish()
+use actix_web::middleware::Logger;
+use actix_web::{App, HttpServer, web};
+
+use sqlx;
+use sqlx::{Pool, Postgres};
+
+pub struct AppState {
+    pool: Pool<Postgres>,
 }
 
-// --- Main Server ---
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().route("/health_check", web::get().to(health_check)))
-        .bind(("127.0.0.1", 8080))?
-        .run()
-        .await
-}
-
-// --- Tests Section ---
-#[cfg(test)]
-mod tests {
-    use super::*; // Import from main module
-    use actix_web::{App, test};
-
-    #[actix_rt::test]
-    async fn health_check_returns_200() {
-        let app =
-            test::init_service(App::new().route("/health_check", web::get().to(health_check)))
-                .await;
-
-        let req = test::TestRequest::get().uri("/health_check").to_request();
-
-        let resp = test::call_service(&app, req).await;
-        assert!(resp.status().is_success());
-        assert_eq!(resp.status(), 200);
+    if std::env::var_os("RUST_LOG").is_none() {
+        unsafe {
+            std::env::set_var("RUST_LOG", "actix_web=info");
+        }
     }
+    env_logger::init();
+
+    let pool = core::db_conn::get_pool_connection().await;
+
+    println!("🚀 Server started successfully");
+
+    HttpServer::new(move || {
+        App::new()
+            .app_data(web::Data::new(AppState { pool: pool.clone() }))
+            .configure(endpoints::v1::config)
+            .wrap(Logger::default())
+    })
+    .bind((settings::HOST.as_str(), *settings::PORT))?
+    .run()
+    .await
 }
