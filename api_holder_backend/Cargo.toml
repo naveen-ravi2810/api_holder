@@ -5,7 +5,19 @@ edition = "2024"
 
 [dependencies]
 actix-web = "4"
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+sqlx = { version = "0.8.6", features = ["postgres", "uuid", "runtime-tokio-rustls", "macros"] }
+tokio = { version = "1", features = ["full"] }
+uuid = "1.17.0"
+validator = { version = "0.16", features = ["derive"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+lazy_static = "1.5.0"
+dotenv = "0.15.0"
+env_logger = "0.10.0"
+regex = "1"
+argon2 = "0.5"
+rand_core = "0.6"  # for generating random salt
+password-hash = "0.5"
 
 [dev-dependencies]
 actix-rt = "2"
